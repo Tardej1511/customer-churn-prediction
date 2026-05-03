@@ -1,5 +1,6 @@
 import streamlit as st
 import pickle
+import pandas as pd  
 
 st.set_page_config(page_title="Churn AI System", page_icon="🤖", layout="wide")
 
@@ -8,6 +9,27 @@ model = pickle.load(open("model.pkl", "rb"))
 scaler = pickle.load(open("scaler.pkl", "rb"))
 
 st.title("🤖 Customer Churn AI Assistant")
+st.markdown("## 📊 Analytics Dashboard")
+
+metric1, metric2, metric3 = st.columns(3)
+
+with metric1:
+    st.metric("Best Model Accuracy", "87%")
+
+with metric2:
+    st.metric("Models Tested", "7")
+
+with metric3:
+    st.metric("Deployment Status", "Live ✅")
+
+st.subheader("📈 Model Performance Comparison")
+
+model_data = pd.DataFrame({
+    "Model": ["Random Forest", "XGBoost", "Neural Network"],
+    "Accuracy": [0.8655, 0.8695, 0.8560]
+})
+
+st.bar_chart(model_data.set_index("Model"))
 st.write("Fill the form or chat with AI to predict customer churn")
 
 # Session state for chat
@@ -47,6 +69,23 @@ with col1:
 
         pred = model.predict(input_data)[0]
         prob = model.predict_proba(input_data)[0][1]
+
+        confidence_data = pd.DataFrame({
+    "Category": ["Stay", "Churn"],
+    "Probability": [1-prob, prob]
+})
+
+st.subheader("Prediction Confidence")
+st.bar_chart(confidence_data.set_index("Category"))
+
+st.subheader("Risk Level")
+
+if prob > 0.7:
+    st.error("🔴 High Risk Customer")
+elif prob > 0.4:
+    st.warning("🟠 Medium Risk Customer")
+else:
+    st.success("🟢 Low Risk Customer")
 
         if pred == 1:
             result = f"⚠️ Customer will CHURN ({round(prob*100,2)}%)"
@@ -102,4 +141,7 @@ with col2:
 
 # Footer
 st.markdown("---")
-st.write("Made by Your Name | AI + ML Project 🚀")
+st.markdown("""
+### 🚀 AI Customer Retention Dashboard  
+Built using Machine Learning + Streamlit + XGBoost
+""")
