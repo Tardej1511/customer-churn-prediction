@@ -1,51 +1,25 @@
 import streamlit as st
 import pickle
 
-# Page config
-st.set_page_config(page_title="Churn Predictor", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Churn AI System", page_icon="🤖", layout="wide")
 
 # Load model
 model = pickle.load(open("model.pkl", "rb"))
 scaler = pickle.load(open("scaler.pkl", "rb"))
 
-# Custom CSS
-st.markdown("""
-    <style>
-    .main {
-        background-color: #f5f7fa;
-    }
-    .title {
-        font-size: 40px;
-        font-weight: bold;
-        text-align: center;
-        color: #2c3e50;
-    }
-    .subtitle {
-        text-align: center;
-        font-size: 18px;
-        color: #7f8c8d;
-        margin-bottom: 30px;
-    }
-    .box {
-        padding: 20px;
-        border-radius: 15px;
-        background-color: white;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.title("🤖 Customer Churn AI Assistant")
+st.write("Fill the form or chat with AI to predict customer churn")
 
-# Header
-st.markdown('<div class="title">🤖 Customer Churn Prediction System</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">AI-powered Decision Support Dashboard</div>', unsafe_allow_html=True)
+# Session state for chat
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 # Layout
-col1, col2 = st.columns([1,1])
+col1, col2 = st.columns(2)
 
-# LEFT SIDE - INPUT
+# ---------------- LEFT SIDE (FORM) ----------------
 with col1:
-    st.markdown('<div class="box">', unsafe_allow_html=True)
-    st.subheader("📥 Enter Customer Details")
+    st.subheader("📥 Customer Input Form")
 
     credit_score = st.number_input("Credit Score", 300, 900, 600)
     geography = st.selectbox("Geography", ["France", "Germany", "Spain"])
@@ -53,56 +27,79 @@ with col1:
     age = st.slider("Age", 18, 100, 30)
     tenure = st.slider("Tenure", 0, 10, 5)
     balance = st.number_input("Balance", 0.0, 200000.0, 50000.0)
-    num_products = st.slider("Number of Products", 1, 4, 1)
-    has_card = st.selectbox("Has Credit Card", [0, 1])
-    active = st.selectbox("Is Active Member", [0, 1])
-    salary = st.number_input("Estimated Salary", 0.0, 200000.0, 50000.0)
+    products = st.slider("Products", 1, 4, 1)
+    has_card = st.selectbox("Has Card", [0, 1])
+    active = st.selectbox("Active Member", [0, 1])
+    salary = st.number_input("Salary", 0.0, 200000.0, 50000.0)
 
-    predict_btn = st.button("🔍 Predict")
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# RIGHT SIDE - OUTPUT
-with col2:
-    st.markdown('<div class="box">', unsafe_allow_html=True)
-    st.subheader("📊 Prediction Result")
-
-    if predict_btn:
-
-        # Encoding
+    if st.button("🔍 Predict from Form"):
         gender_val = 1 if gender == "Male" else 0
         geo_germany = 1 if geography == "Germany" else 0
         geo_spain = 1 if geography == "Spain" else 0
 
         input_data = [[
             credit_score, gender_val, age, tenure, balance,
-            num_products, has_card, active, salary,
+            products, has_card, active, salary,
             geo_germany, geo_spain
         ]]
 
         input_data = scaler.transform(input_data)
 
-        prediction = model.predict(input_data)[0]
+        pred = model.predict(input_data)[0]
+        prob = model.predict_proba(input_data)[0][1]
 
-        # Agent logic
-        if prediction == 1:
-            if balance > 100000:
-                action = "Give premium offer"
-            elif age > 50:
-                action = "Provide loyalty benefits"
-            else:
-                action = "Give discount"
-
-            st.error("⚠️ Customer is likely to CHURN")
+        if pred == 1:
+            result = f"⚠️ Customer will CHURN ({round(prob*100,2)}%)"
         else:
-            action = "Customer is safe"
+            result = f"✅ Customer will STAY ({round(prob*100,2)}%)"
 
-            st.success("✅ Customer will STAY")
+        st.success(result)
 
-        st.markdown("### 💡 Suggested Action")
-        st.info(action)
+        # Add to chat
+        st.session_state.messages.append({"role": "assistant", "content": result})
 
-    else:
-        st.write("👈 Enter details and click Predict")
+# ---------------- RIGHT SIDE (CHATBOT) ----------------
+with col2:
+    st.subheader("💬 AI Chatbot")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Show chat history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    user_input = st.chat_input("Enter values (comma separated)")
+
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+
+        with st.chat_message("user"):
+            st.markdown(user_input)
+
+        try:
+            values = list(map(float, user_input.split(",")))
+
+            if len(values) != 11:
+                response = "❌ Enter exactly 11 values."
+            else:
+                input_data = [values]
+                input_data = scaler.transform(input_data)
+
+                pred = model.predict(input_data)[0]
+                prob = model.predict_proba(input_data)[0][1]
+
+                if pred == 1:
+                    response = f"⚠️ Customer will CHURN ({round(prob*100,2)}%)"
+                else:
+                    response = f"✅ Customer will STAY ({round(prob*100,2)}%)"
+
+        except:
+            response = "❌ Invalid input."
+
+        st.session_state.messages.append({"role": "assistant", "content": response})
+
+        with st.chat_message("assistant"):
+            st.markdown(response)
+
+# Footer
+st.markdown("---")
+st.write("Made by Your Name | AI + ML Project 🚀")
