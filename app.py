@@ -40,6 +40,7 @@ if "messages" not in st.session_state:
 col1, col2 = st.columns(2)
 
 # ---------------- LEFT SIDE (FORM) ----------------
+# ---------------- LEFT SIDE (FORM) ----------------
 with col1:
     st.subheader("📥 Customer Input Form")
 
@@ -70,23 +71,26 @@ with col1:
         pred = model.predict(input_data)[0]
         prob = model.predict_proba(input_data)[0][1]
 
+        # ✅ Confidence Graph
         confidence_data = pd.DataFrame({
-    "Category": ["Stay", "Churn"],
-    "Probability": [1-prob, prob]
-})
+            "Category": ["Stay", "Churn"],
+            "Probability": [1-prob, prob]
+        })
 
-st.subheader("Prediction Confidence")
-st.bar_chart(confidence_data.set_index("Category"))
+        st.subheader("Prediction Confidence")
+        st.bar_chart(confidence_data.set_index("Category"))
 
-st.subheader("Risk Level")
+        # ✅ Risk Level
+        st.subheader("Risk Level")
 
-if prob > 0.7:
-    st.error("🔴 High Risk Customer")
-elif prob > 0.4:
-    st.warning("🟠 Medium Risk Customer")
-else:
-    st.success("🟢 Low Risk Customer")
+        if prob > 0.7:
+            st.error("🔴 High Risk Customer")
+        elif prob > 0.4:
+            st.warning("🟠 Medium Risk Customer")
+        else:
+            st.success("🟢 Low Risk Customer")
 
+        # ✅ Final Result
         if pred == 1:
             result = f"⚠️ Customer will CHURN ({round(prob*100,2)}%)"
         else:
